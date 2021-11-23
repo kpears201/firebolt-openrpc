@@ -28,6 +28,9 @@
   },
   "homepage": "https://github.com/rdkcentral/firebolt-core-sdk/blob/main/src/modules//ottx/firebolt-openrpc#readme",
   "devDependencies": {
+    "@babel/plugin-transform-runtime": "^7.16.4",
+    "@babel/runtime": "^7.16.3",
+    "@babel/runtime-corejs3": "^7.16.3",
     "jest": "^27.3.1",
     "webpack-cli": "^4.8.0"
   },

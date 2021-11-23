@@ -60,4 +60,27 @@ export default class LegacyTransport {
      */
     return transport.proxyObjectTest !== undefined
   }
+
+  static async create () {
+    if (
+      typeof win.ServiceManager !== 'undefined' &&
+      win.ServiceManager &&
+      win.ServiceManager.version
+    ) {
+      // Wire up the queue
+      transport = queue
+      // get the default bridge service, and flush the queue
+      const service = await LegacyTransport.getServiceForJS(transport_service_name)
+      if (LegacyTransport.isLegacy(service)) {
+        return new LegacyTransport(service)
+      }
+    }
+    return null
+  }
+
+  static getServiceForJS (name) {
+    return new Promise((resolve, reject) => {
+      win.ServiceManager.getServiceForJavaScript(transport_service_name, resolve)
+    })
+  }
 }

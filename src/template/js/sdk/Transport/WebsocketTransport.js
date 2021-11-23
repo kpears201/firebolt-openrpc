@@ -1,13 +1,14 @@
 const MAX_QUEUED_MESSAGES = 100
-const WRAP_METHOD = 'org.firebolt.Firebolt.1.call'
+const DEFAULT_SESSION_ENDPOINT = 'http://localhost:3473/session/'
 
 export default class WebsocketTransport {
-  constructor (wrap = false) {
-    this._wrap = wrap
+  constructor (apiEndpoint) {
     this._ws = null
     this._connected = false
     this._queue = []
     this._callbacks = []
+    this._connecting = false
+    this._apiEndpoint = apiEndpoint
   }
 
   send (msg) {
@@ -29,20 +30,6 @@ export default class WebsocketTransport {
     this._callbacks.push(callback)
   }
 
-  _wrapMessage (msg) {
-    return JSON.stringify({
-      jsonrpc: '2.0',
-      method: WRAP_METHOD,
-      params: {
-        payload: msg
-      }
-    })
-  }
-
-  _unwrapMessage (msg) {
-    return JSON.parse(msg.payload)
-  }
-
   _notifyCallbacks (message) {
     for (let i = 0; i < this._callbacks.length; i++) {
       setTimeout(() => this._callbacks[i](message), 1)
@@ -50,11 +37,15 @@ export default class WebsocketTransport {
   }
 
   _connect () {
-    if (this._ws) return
-    this._ws = new WebSocket(this._apiTarget())
+    if (this._ws || this._connecting) return
+    this._connecting = true
+    this._configureWs(this._apiEndpoint)
+  }
+
+  _configureWs (url) {
+    this._ws = new WebSocket(url)
     this._ws.addEventListener('message', message => {
-      const m = this._wrap ? this._unwrapMessage(message.data) : message.data
-      this._notifyCallbacks(m)
+      this._notifyCallbacks(message.data)
     })
     this._ws.addEventListener('error', message => {
     })
@@ -63,6 +54,7 @@ export default class WebsocketTransport {
       this._connected = false
     })
     this._ws.addEventListener('open', message => {
+      this._connecting = false
       this._connected = true
       for (let i = 0; i < this._queue.length; i++) {
         this._ws.send(this._queue[i])
@@ -71,27 +63,28 @@ export default class WebsocketTransport {
     })
   }
 
-  _apiTarget () {
-    let apiTarget = new URLSearchParams(window.location.search).get('_apiTarget')
-    if (apiTarget) return apiTarget
-    if (window.apiTarget) {
-      return window.apiTarget
-    }
-    return this._defaultApiTarget()
+  /**
+   * Checks these locations for apiEndpoint:
+   * queryParameter "_apiEndpoint"
+   * global variable _apiEndpoint
+   * session object obtained by querying session service
+   * @returns The apiEndpoint uri to the websocket
+   */
+   async static discoverApiEndpoint () {
+    const apiEndpoint = new URLSearchParams(window.location.search).get('_apiEndpoint')
+    if (apiEndpoint) return apiEndpoint
+    if (window._apiEndpoint) return window._apiEndpoint
+    const resp = await WebsocketTransport.fetchSession()
+    window.apiEndpoint = resp.apiEndpoint
+    return resp.apiEndpoint
   }
 
-  _defaultApiTarget () {
-    let fbTransToken = new URLSearchParams(window.location.search).get('_fbTransToken')
-    if (fbTransToken == null) {
-      if (window && window.thunder && (typeof window.thunder.token === 'function')) {
-        fbTransToken = window.thunder.token()
-      }
-    }
-    let target = 'ws://127.0.0.1:9998/jsonrpc?token='
-    if (fbTransToken) {
-      target += fbTransToken
-    }
-    return target
+  async static fetchSession () {
+    let sessionEndpoint = new URLSearchParams(window.location.search).get('_sessionEndpoint')
+    const resp = await fetch(sessionEndpoint || DEFAULT_SESSION_ENDPOINT, {
+      method: 'POST'
+    })
+    return await resp.json()
   }
 
 }

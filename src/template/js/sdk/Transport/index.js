@@ -44,45 +44,25 @@ if (!win.__firebolt) {
 }
 
 // Returns an FTL queue. Initializes the default transport layer if available
-const getTransportLayer = () => {
+const loadTransportLayer = async () => {
   let transport
   if (typeof win.__firebolt.transport_service_name === 'string')
     transport_service_name = win.__firebolt.transport_service_name
 
-  // TODO need a better way then query parameter to tell app to use transport
-  let fbTrans = new URLSearchParams(window.location.search).get('_fbTrans')
-  if ((fbTrans === 'ws') || (fbTrans === 'ws_wrap')) {
-    transport = new WebsocketTransport(fbTrans === 'ws_wrap')
-    setTransportLayer(transport)
-  } else if (
-    typeof win.ServiceManager !== 'undefined' &&
-    win.ServiceManager &&
-    win.ServiceManager.version
-  ) {
-    // Wire up the queue
-    transport = queue
-    // get the default bridge service, and flush the queue
-    win.ServiceManager.getServiceForJavaScript(transport_service_name, service => {
-      if (LegacyTransport.isLegacy(service)) {
-        transport = new LegacyTransport(service)
-      } else {
-        transport = service
-      }
-      setTransportLayer(transport)
-    })
-  } else {
-    // Check for custom, or fall back to mock
-    transport = queue
-    
-    // in 500ms, default to the mock FTL
-    // TODO: design a better way to load mock
-    timeout = setTimeout(() => {
-      console.log("Setting up mock transport layer")
-      setTransportLayer(mock)
-    }, 500)
-
+    /** First check if websocket is apiEndpoint is discoverable */
+  const apiEndpoint = await WebsocketTransport.discoverApiEndpoint()
+  if (apiEndpoint) {
+    setTransportLayer(new WebsocketTransport(apiEndpoint))
+    return
   }
-  return transport
+  /** Next check if legacy is available */
+  const legacy = await LegacyTransport.create()
+  if (legacy) {
+    setTransportLayer(legacy)
+    return
+  }
+  /** If all else fails use a mock */
+  setTransportLayer(mock)
 }
 
 const setTransportLayer = tl => {
@@ -158,10 +138,10 @@ const receive_handler = message => {
   }
 }
 
-transport = getTransportLayer()
-
+transport = queue
 // TODO: clean up resolved promises
 transport.receive(receive_handler)
+loadTransportLayer()
 
 if (win.__firebolt) {
   if (win.__firebolt.mockTransportLayer === true) {
