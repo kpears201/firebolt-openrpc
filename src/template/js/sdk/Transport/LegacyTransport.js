@@ -16,6 +16,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { default as win } from '../Transport/global'
+
 export default class LegacyTransport {
   constructor (bridge) {
     this.bridge = bridge
@@ -26,18 +28,18 @@ export default class LegacyTransport {
   }
 
   receive (callback) {
-    window.$badger = window.$badger || {}
+    win.$badger = win.$badger || {}
     /** Hold on to real $badger callback and event methods so they can be called for non-jsonrpc messages */
-    const badgerCallback = window.$badger.callback ? window.$badger.callback.bind(window.$badger) : null
-    const badgerEvent = window.$badger.event ? window.$badger.event.bind(window.$badger) : null
-    window.$badger.callback = (pid, success, json) => {
+    const badgerCallback = win.$badger.callback ? win.$badger.callback.bind(win.$badger) : null
+    const badgerEvent = win.$badger.event ? win.$badger.event.bind(win.$badger) : null
+    win.$badger.callback = (pid, success, json) => {
       if (json.jsonrpc) {
         callback(JSON.stringify(json))
       } else if (badgerCallback) {
         badgerCallback(pid, success, json)
       }
     }
-    window.$badger.event = (handlerId, json) => {
+    win.$badger.event = (handlerId, json) => {
       if (json.jsonrpc) {
         callback(JSON.stringify(json))
       } else if (badgerEvent) {
@@ -67,9 +69,10 @@ export default class LegacyTransport {
       win.ServiceManager &&
       win.ServiceManager.version
     ) {
-      // Wire up the queue
-      transport = queue
-      // get the default bridge service, and flush the queue
+
+      if (typeof win.__firebolt.transport_service_name === 'string') {
+        transport_service_name = win.__firebolt.transport_service_name
+      }
       const service = await LegacyTransport.getServiceForJS(transport_service_name)
       if (LegacyTransport.isLegacy(service)) {
         return new LegacyTransport(service)

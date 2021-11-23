@@ -1,3 +1,5 @@
+import { default as win } from '../Transport/global'
+
 const MAX_QUEUED_MESSAGES = 100
 const DEFAULT_SESSION_ENDPOINT = 'http://localhost:3473/session/'
 
@@ -13,13 +15,12 @@ export default class WebsocketTransport {
 
   send (msg) {
     this._connect()
-    const wsMsg = this._wrap ? this._wrapMessage(msg) : msg
 
     if (this._connected) {
-      this._ws.send(wsMsg)
+      this._ws.send(msg)
     } else {
       if (this._queue.length < MAX_QUEUED_MESSAGES) {
-        this._queue.push(wsMsg)
+        this._queue.push(msg)
       }
     }
   }
@@ -52,6 +53,7 @@ export default class WebsocketTransport {
     this._ws.addEventListener('close', message => {
       this._ws = null
       this._connected = false
+      this._connecting = false
     })
     this._ws.addEventListener('open', message => {
       this._connecting = false
@@ -71,16 +73,15 @@ export default class WebsocketTransport {
    * @returns The apiEndpoint uri to the websocket
    */
    async static discoverApiEndpoint () {
-    const apiEndpoint = new URLSearchParams(window.location.search).get('_apiEndpoint')
+    const apiEndpoint = new URLSearchParams(win.location.search).get('_apiEndpoint')
     if (apiEndpoint) return apiEndpoint
-    if (window._apiEndpoint) return window._apiEndpoint
+    if (win._apiEndpoint) return win._apiEndpoint
     const resp = await WebsocketTransport.fetchSession()
-    window.apiEndpoint = resp.apiEndpoint
     return resp.apiEndpoint
   }
 
   async static fetchSession () {
-    let sessionEndpoint = new URLSearchParams(window.location.search).get('_sessionEndpoint')
+    let sessionEndpoint = new URLSearchParams(win.location.search).get('_sessionEndpoint')
     const resp = await fetch(sessionEndpoint || DEFAULT_SESSION_ENDPOINT, {
       method: 'POST'
     })

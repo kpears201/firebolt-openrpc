@@ -45,11 +45,7 @@ if (!win.__firebolt) {
 
 // Returns an FTL queue. Initializes the default transport layer if available
 const loadTransportLayer = async () => {
-  let transport
-  if (typeof win.__firebolt.transport_service_name === 'string')
-    transport_service_name = win.__firebolt.transport_service_name
-
-    /** First check if websocket is apiEndpoint is discoverable */
+  /** First check if websocket apiEndpoint is discoverable */
   const apiEndpoint = await WebsocketTransport.discoverApiEndpoint()
   if (apiEndpoint) {
     setTransportLayer(new WebsocketTransport(apiEndpoint))
