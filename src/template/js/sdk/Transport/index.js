@@ -29,7 +29,6 @@ initSettings({}, { log: true })
 const promises = []
 let transport
 let id = 1
-let transport_service_name = 'com.comcast.BridgeObject_1'
 let timeout
 let emit
 

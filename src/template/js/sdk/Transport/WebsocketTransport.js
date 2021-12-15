@@ -72,15 +72,20 @@ export default class WebsocketTransport {
    * session object obtained by querying session service
    * @returns The apiEndpoint uri to the websocket
    */
-   async static discoverApiEndpoint () {
+  static async discoverApiEndpoint () {
     const apiEndpoint = new URLSearchParams(win.location.search).get('_apiEndpoint')
     if (apiEndpoint) return apiEndpoint
     if (win._apiEndpoint) return win._apiEndpoint
-    const resp = await WebsocketTransport.fetchSession()
-    return resp.apiEndpoint
+    try {
+      const resp = await WebsocketTransport.fetchSession()
+      return resp.apiEndpoint
+    } catch (err) {
+      // session service might just not be available on this platform, SDK will try other transports
+    }
+    return null
   }
 
-  async static fetchSession () {
+  static async fetchSession () {
     let sessionEndpoint = new URLSearchParams(win.location.search).get('_sessionEndpoint')
     const resp = await fetch(sessionEndpoint || DEFAULT_SESSION_ENDPOINT, {
       method: 'POST'

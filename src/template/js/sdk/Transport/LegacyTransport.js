@@ -70,10 +70,11 @@ export default class LegacyTransport {
       win.ServiceManager.version
     ) {
 
-      if (typeof win.__firebolt.transport_service_name === 'string') {
-        transport_service_name = win.__firebolt.transport_service_name
+      let transportServiceName = 'com.comcast.BridgeObject_1'
+      if (typeof win.__firebolt.transportServiceName === 'string') {
+        transportServiceName = win.__firebolt.transportServiceName
       }
-      const service = await LegacyTransport.getServiceForJS(transport_service_name)
+      const service = await LegacyTransport.getServiceForJS(transportServiceName)
       if (LegacyTransport.isLegacy(service)) {
         return new LegacyTransport(service)
       }
@@ -83,7 +84,7 @@ export default class LegacyTransport {
 
   static getServiceForJS (name) {
     return new Promise((resolve, reject) => {
-      win.ServiceManager.getServiceForJavaScript(transport_service_name, resolve)
+      win.ServiceManager.getServiceForJavaScript(name, resolve)
     })
   }
 }

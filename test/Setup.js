@@ -19,6 +19,7 @@
 /**
  * This module sets up the mock transport layer immediately, instead of letting the SDK wait 500ms
  */
+ require('jest-fetch-mock').enableMocks()
 
  const win = globalThis || window
 
